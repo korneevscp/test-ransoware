@@ -1,0 +1,25 @@
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.PublicKey import RSA
+import base64, os, json
+
+with open('backup_keys.json') as f:
+    infos = json.load(f)
+
+cle_privee = RSA.import_key(infos['cle_privee'])
+cle_aes_chiffree = base64.b64decode(infos['cle_aes_chiffree'])
+cipher_rsa = PKCS1_OAEP.new(cle_privee)
+cle_aes = cipher_rsa.decrypt(cle_aes_chiffree)
+
+for root, dirs, files in os.walk('C:\\'):
+    for f in files:
+        if f.endswith('.encrypted'):
+            chemin = os.path.join(root, f)
+            with open(chemin, 'rb') as fh:
+                nonce = fh.read(8)
+                encrypted = fh.read()
+            cipher = AES.new(cle_aes, AES.MODE_CTR, nonce=nonce)
+            data = cipher.decrypt(encrypted)
+            original = chemin.replace('.encrypted', '')
+            with open(original, 'wb') as fh:
+                fh.write(data)
+            os.remove(chemin)
